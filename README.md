@@ -1,3 +1,18 @@
+> [!IMPORTANT]
+> **This is a fork of [rwmt/Multiplayer](https://github.com/rwmt/Multiplayer) with extra fixes.**
+>
+> **To install:** download `Multiplayer-local-fixes.zip` from the [latest release](https://github.com/SecDefPachiko/rimworld-multiplayer-fixes/releases/latest)
+> (not the green "Code → Download ZIP" button, which has no compiled mod). Then:
+> 1. Unsubscribe from the Steam Workshop version of Multiplayer.
+> 2. Extract the zip into `RimWorld/Mods` so you get `RimWorld/Mods/Multiplayer/About/About.xml`.
+> 3. Enable Prepatcher and Multiplayer, with Multiplayer right after Core and the expansions.
+>
+> Everyone in the game must use this same build.
+>
+> **Fixes on top of upstream `dev`:** Steam reconnects (upstream PR #958), 30s timeout for unresponsive players,
+> join handshake threading, rejoin fragment errors, "Force close trade" in the colonist bar Dialogs menu,
+> and "Convert to singleplayer" on the disconnect screen so clients keep the game if the host drops.
+
 ![banner](https://user-images.githubusercontent.com/49448379/134965756-2a30ffd9-2f6c-43d6-a2a4-584252fc2e4b.png)
 
 
