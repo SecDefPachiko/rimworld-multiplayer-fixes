@@ -24,7 +24,11 @@ namespace Multiplayer.Client
 
         // The background might be drawn at the same time as the loading of a map on a different thread calls Verse.Rand
         // Verse.Rand can't be used here because it isn't thread-safe
+#if RW17
+        private static Random rand = new(SystemInfo.deviceName.GetHashCode());
+#else
         private static Random rand = new(SystemInfo.deviceUniqueIdentifier.GetHashCode());
+#endif
 
         private static float newPulseTimer;
 

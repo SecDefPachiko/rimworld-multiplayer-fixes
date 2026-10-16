@@ -128,7 +128,11 @@ public class SaveableDesyncInfo(
             .AppendLine($"Processor Speed (MHz)|||{SystemInfo.processorFrequency}")
             .AppendLine($"Thread Count|||{SystemInfo.processorCount}")
             .AppendLine("\n###GPU Info###")
+#if RW17
+            .AppendLine($"GPU Family|||{SystemInfo.graphicsDeviceVendorID}")
+#else
             .AppendLine($"GPU Family|||{SystemInfo.graphicsDeviceVendor}")
+#endif
             .AppendLine($"GPU Type|||{SystemInfo.graphicsDeviceType}")
             .AppendLine($"GPU Name|||{SystemInfo.graphicsDeviceName}")
             .AppendLine($"GPU VRAM|||{SystemInfo.graphicsMemorySize}")

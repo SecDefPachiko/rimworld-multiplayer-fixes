@@ -7,12 +7,18 @@ using Mono.Cecil;
 using Multiplayer.API;
 using Multiplayer.Client.Util;
 using RimWorld;
+using Verse;
 
 namespace MultiplayerLoader;
 
 public static class SyncRituals
 {
     private static List<ISyncMethodForPrepatcher> syncMethodsWithPrepatches = new();
+
+    // Harmony fallback for when Prepatcher didn't rewrite the methods (not installed, or RimWorld 1.7 where the game
+    // runs on .NET instead of Mono). (target method name, sync method) pairs, filled in the registration pass.
+    private static List<(string methodName, ISyncMethodForPrepatcher syncMethod)> harmonyFallbackSyncMethods = new();
+    private static List<MethodInfo> harmonyFallbackTargets = new();
 
     public static bool PrepatcherPrefix(int index, object __instance, object[] __args)
     {
@@ -50,6 +56,9 @@ public static class SyncRituals
                 var newSyncMethod = (ISyncMethodForPrepatcher)syncMethod.Invoke(null, [derivedType, method, null]);
                 postProcess?.Invoke(newSyncMethod);
                 syncMethodsWithPrepatches.Add(newSyncMethod);
+
+                harmonyFallbackSyncMethods.Add((method, newSyncMethod));
+                harmonyFallbackTargets.Add(AccessTools.Method(ClosedBaseType(derivedType, baseType), method));
             }
         }
 
@@ -116,6 +125,50 @@ public static class SyncRituals
                 lambdaOrdinal: 2).Name,
             typeof(PawnPsychicRitualRoleSelectionWidget)
         ); // Not participating left click delegate (try assign any role or spectate)
+
+        if (module == null)
+            ApplyHarmonyFallbackIfNeeded();
+    }
+
+    // Prepatcher inserts a call to PrepatcherPrefix at the start of each target method before the game loads.
+    // If that call isn't there, Prepatcher didn't run, so patch the same methods with Harmony instead.
+    private static void ApplyHarmonyFallbackIfNeeded()
+    {
+        var prepatcherPrefix = AccessTools.Method(typeof(SyncRituals), nameof(PrepatcherPrefix));
+        var firstTarget = harmonyFallbackTargets.First();
+        if (PatchProcessor.GetOriginalInstructions(firstTarget).Any(inst => inst.Calls(prepatcherPrefix)))
+            return;
+
+        Log.Message("Multiplayer: Prepatcher not active, syncing ritual role selection with Harmony patches");
+
+        var harmony = new Harmony("rwmt.multiplayer.syncrituals");
+        var prefix = new HarmonyMethod(AccessTools.Method(typeof(SyncRituals), nameof(HarmonyFallbackPrefix)));
+        foreach (var target in harmonyFallbackTargets.Distinct())
+            harmony.Patch(target, prefix: prefix);
+    }
+
+    // The two widget types share the base class's methods (for reference type arguments .NET runs one shared copy
+    // of the generic code), so this can be called for either widget type and has to look up the matching sync method.
+    // It may also be applied twice to the same shared code; __runOriginal makes the second application a no-op.
+    private static bool HarmonyFallbackPrefix(object __instance, object[] __args, MethodBase __originalMethod, bool __runOriginal)
+    {
+        if (!__runOriginal) return false;
+
+        var instanceType = __instance.GetType();
+        foreach (var (methodName, sync) in harmonyFallbackSyncMethods)
+            if (methodName == __originalMethod.Name && sync.TargetType == instanceType)
+                return !sync.DoSync(__instance, __args);
+
+        return true;
+    }
+
+    // PawnRoleSelectionWidgetBase<> -> PawnRoleSelectionWidgetBase<RitualRole> for PawnRitualRoleSelectionWidget
+    private static Type ClosedBaseType(Type derivedType, Type openBaseType)
+    {
+        for (var t = derivedType; t != null; t = t.BaseType)
+            if (t.IsGenericType && t.GetGenericTypeDefinition() == openBaseType)
+                return t;
+        throw new Exception($"{derivedType} doesn't derive from {openBaseType}");
     }
 
     private static (WidgetType roleSelectionWidget, string Key) RitualRoleWriter<WidgetType, RoleType>(IEnumerable<RoleType> roles, object target, object[] _)

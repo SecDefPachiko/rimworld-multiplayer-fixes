@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    RimWorld 1.7 (unstable branch) runs on .NET 10 instead of Mono. Build for it with:
+      dotnet build Client/Multiplayer.csproj -c Release -p:RimWorldVersion=1.7 -p:RimWorldDir="path/to/RimWorld"
+    The default (no RimWorldVersion) is the regular 1.6 build.
+  -->
+  <PropertyGroup>
+    <RimWorldVersion Condition="'$(RimWorldVersion)' == ''">1.6</RimWorldVersion>
+  </PropertyGroup>
+
+  <!-- Never compile the other build's generated files (e.g. obj\...\AssemblyInfo.cs) -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**;obj17\**;bin17\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- Separate restore/output folders so 1.6 and 1.7 builds don't clobber each other -->
+  <PropertyGroup Condition="'$(RimWorldVersion)' == '1.7'">
+    <BaseIntermediateOutputPath>obj17\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin17\</BaseOutputPath>
+    <RimWorldDir Condition="'$(RimWorldDir)' == ''">K:\SteamLibrary\steamapps\common\RimWorld</RimWorldDir>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,24 @@
+<Project>
+  <!-- RimWorld 1.7: reference the game's own assemblies instead of Krafs.Rimworld.Ref (see Directory.Build.props) -->
+  <PropertyGroup Condition="'$(RimWorldVersion)' == '1.7'">
+    <DefineConstants>$(DefineConstants);RW17</DefineConstants>
+    <!-- net48 builds copy NuGet dependencies (LiteNetLib, RestSharp, Tomlyn...) to the output by default, .NET 10 builds don't -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RimWorldVersion)' == '1.7'">
+    <!-- Keep the reference but use none of its assets; this also overrides the copy RimWorld.MultiplayerAPI brings in transitively -->
+    <PackageReference Remove="Krafs.Rimworld.Ref" />
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4850" ExcludeAssets="all" PrivateAssets="all" />
+    <Reference Include="$(RimWorldDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(RimWorldDir)\UnityStubs.dll" Private="false" />
+    <Reference Include="$(RimWorldDir)\Waylith.UnityCompat.dll" Private="false" />
+    <Reference Include="$(RimWorldDir)\com.rlabrecque.steamworks.net.dll" Private="false" />
+    <Reference Include="$(RimWorldDir)\ISharpZipLib.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CheckRimWorld17Dir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(RimWorldVersion)' == '1.7'">
+    <Error Condition="!Exists('$(RimWorldDir)\UnityStubs.dll')"
+           Text="RimWorld 1.7 not found at '$(RimWorldDir)'. Pass -p:RimWorldDir=&quot;path\to\RimWorld&quot; (the unstable 1.7 install)." />
+  </Target>
+</Project>

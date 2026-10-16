@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework Condition="'$(RimWorldVersion)' != '1.7'">net48</TargetFramework>
+    <TargetFramework Condition="'$(RimWorldVersion)' == '1.7'">net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>12</LangVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -25,7 +26,7 @@
   </ItemGroup>
 
   <!-- Ignore any system frameworks and get the system assemblies from Krafs.Rimworld.Ref -->
-  <Target Name="RemoveFramework" BeforeTargets="PrepareForBuild" DependsOnTargets="GetReferenceAssemblyPaths">
+  <Target Name="RemoveFramework" BeforeTargets="PrepareForBuild" DependsOnTargets="GetReferenceAssemblyPaths" Condition="'$(RimWorldVersion)' != '1.7'">
     <PropertyGroup>
       <TargetFrameworkDirectory></TargetFrameworkDirectory>
     </PropertyGroup>
@@ -34,4 +35,6 @@
   <PropertyGroup Label="Normalise stack trace file locations">
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=$(AssemblyName)/</PathMap>
   </PropertyGroup>
+
+  <Import Project="..\RimWorld17.targets" />
 </Project>

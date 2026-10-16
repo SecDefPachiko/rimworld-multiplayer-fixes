@@ -26,8 +26,9 @@ namespace Multiplayer.Client.Desyncs
 
         public static int acc;
 
+        // The tracer walks Mono's native stack frames, so it needs Mono (not RimWorld 1.7's .NET runtime) on x86/x64
         private static bool SupportsDeferredStackTracing =>
-            RuntimeInformation.ProcessArchitecture is Architecture.X64 or Architecture.X86;
+            Native.IsMono && RuntimeInformation.ProcessArchitecture is Architecture.X64 or Architecture.X86;
 
         public static void Postfix()
         {

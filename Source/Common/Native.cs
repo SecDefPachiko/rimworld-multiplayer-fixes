@@ -14,6 +14,10 @@ namespace Multiplayer.Client
             Windows, OSX, Linux, Dummy
         }
 
+        // Everything in this class calls into Mono's native library. RimWorld 1.7 runs on .NET (CoreCLR) instead,
+        // where none of it exists, so callers have to check this first.
+        public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+
         public static IntPtr DomainPtr { get; private set; }
 
         // LMF is Last Managed Frame
@@ -24,6 +28,8 @@ namespace Multiplayer.Client
 
         public static void EarlyInit(NativeOS os)
         {
+            if (!IsMono) return;
+
             if (os == NativeOS.Linux)
                 TheLinuxWay();
             if (os == NativeOS.OSX)
@@ -46,8 +52,9 @@ namespace Multiplayer.Client
 
         public static unsafe void InitLmfPtr(NativeOS os)
         {
-            // Don't bother on 32 bit runtimes
-            if (IntPtr.Size == 4)
+            // Don't bother on 32 bit runtimes. Reads Mono's internal thread struct, so Mono only.
+            // LmfPtr staying 0 turns off deferred stack tracing.
+            if (IntPtr.Size == 4 || !IsMono)
                 return;
 
             const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
@@ -76,6 +83,8 @@ namespace Multiplayer.Client
 
         private static IntPtr MaybeFindHarmonyOriginalMethod(long addr, bool harmonyOriginals)
         {
+            if (!IsMono) return IntPtr.Zero;
+
             var ji = mono_jit_info_table_find(DomainPtr, (IntPtr)addr);
             if (ji == IntPtr.Zero) return IntPtr.Zero;
 
@@ -110,6 +119,8 @@ namespace Multiplayer.Client
 
         public static bool GetMethodAggressiveInlining(long addr)
         {
+            if (!IsMono) return false;
+
             var domain = DomainPtr;
             var ji = mono_jit_info_table_find(domain, (IntPtr)addr);
 

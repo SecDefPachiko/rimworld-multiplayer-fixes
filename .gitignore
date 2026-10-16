@@ -278,3 +278,8 @@ PersonalDefinitions.targets
 !Source/Client/Debug/
 
 /Source/mpdb
+
+# RimWorld 1.7 build outputs
+/1.7/
+obj17/
+bin17/

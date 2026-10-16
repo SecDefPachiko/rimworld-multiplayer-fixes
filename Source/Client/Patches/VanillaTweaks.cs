@@ -19,7 +19,9 @@ namespace Multiplayer.Client
         {
             if (done) return;
             GUI.skin.font = Text.fontStyles[1].font;
+#if !RW17 // 1.7's fonts can't be redirected to OS font names
             Text.fontStyles[1].font.fontNames = new[] { "arial", "arialbd", "ariali", "arialbi" };
+#endif
             done = true;
         }
     }

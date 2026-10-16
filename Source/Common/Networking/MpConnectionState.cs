@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Multiplayer.Common.Networking.Packet;
+using MethodInvoker = HarmonyLib.MethodInvoker; // .NET 10 also has System.Reflection.MethodInvoker
 
 namespace Multiplayer.Common
 {

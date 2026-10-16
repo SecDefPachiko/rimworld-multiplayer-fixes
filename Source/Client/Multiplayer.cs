@@ -105,8 +105,11 @@ namespace Multiplayer.Client
                     _ => Native.NativeOS.Windows
                 });
 
-            DisableOmitFramePointer();
-            JittedMethods.Init();
+            if (Native.IsMono)
+            {
+                DisableOmitFramePointer();
+                JittedMethods.Init();
+            }
 
             MultiplayerLoader.Multiplayer.settingsWindowDrawer =
                 rect => MpSettingsUI.DoSettingsWindowContents(settings, rect);

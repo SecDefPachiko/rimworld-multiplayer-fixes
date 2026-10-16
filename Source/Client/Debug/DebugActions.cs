@@ -220,7 +220,8 @@ namespace Multiplayer.Client
             var logItem = StackTraceLogItemRaw.GetFromPool();
             var trace = logItem.raw;
             int hash = 0;
-            int depth = DeferredStackTracingImpl.TraceImpl(trace, ref hash);
+            // No stack tracing without Mono (RimWorld 1.7), same as DeferredStackTracing.Postfix
+            int depth = Native.LmfPtr != 0 ? DeferredStackTracingImpl.TraceImpl(trace, ref hash) : 0;
 
             Multiplayer.game.asyncWorldTimeComp.randState++;
             Multiplayer.game.sync.TryAddStackTraceForDesyncLogRaw(logItem, depth, hash);

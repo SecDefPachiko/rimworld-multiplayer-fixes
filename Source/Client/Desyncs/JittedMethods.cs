@@ -73,6 +73,7 @@ public static class JittedMethods
 
     public static void OnApplicationQuit()
     {
+        if (profiler == IntPtr.Zero) return; // Never created (not running on Mono)
         Native.mono_profiler_set_jit_done_callback(profiler, null);
     }
 

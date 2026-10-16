@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using MethodInvoker = HarmonyLib.MethodInvoker; // .NET 10 also has System.Reflection.MethodInvoker
 using RimWorld;
 using UnityEngine;
 using Verse;

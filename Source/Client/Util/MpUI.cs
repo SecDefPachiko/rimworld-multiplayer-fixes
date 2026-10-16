@@ -263,8 +263,10 @@ namespace Multiplayer.Client.Util
             {
                 te.scrollOffset = scrollOffset;
                 te.text = new string(PassChar, password.Length);
+#if !RW17 // 1.7's TextEditor has no cursor reveal flag or scroll update method
                 AccessTools.Field(typeof(TextEditor), "m_RevealCursor").SetValue(te, true);
                 te.UpdateScrollOffsetIfNeeded(new Event());
+#endif
             }
         }
     }
