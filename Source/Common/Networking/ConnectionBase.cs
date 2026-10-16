@@ -199,6 +199,17 @@ namespace Multiplayer.Common
             FragmentedPacket fragPacket;
             if (fragIndex == -1)
             {
+                // Fragments of a packet are sent back to back on a reliable ordered channel, so a new fragment id means
+                // the previous fragmented packet will never complete. This happens e.g. when the rest of it was dropped
+                // in Lenient mode after a state change during rejoining. Drop the stale packet instead of disconnecting.
+                if (fragments.Count >= MaxFragmentedPackets && fragments.Count > 0)
+                {
+                    var (staleId, stale) = fragments[0];
+                    ServerLog.Error($"Dropping incomplete fragmented packet {stale.Id} (fragment id: {staleId}, " +
+                                    $"{stale.ReceivedPartsCount}/{stale.ExpectedPartsCount} parts) superseded by {packetType} (fragment id: {fragId})");
+                    fragments.RemoveAt(0);
+                }
+
                 if (fragments.Count >= MaxFragmentedPackets)
                     throw new PacketReadException(
                         $"High number of fragmented packets at once! {fragments.Count}/{MaxFragmentedPackets}. This will likely cause issues. Dropping the just received fragmented packet (packet type: {packetType}, fragment id: {fragId}).");

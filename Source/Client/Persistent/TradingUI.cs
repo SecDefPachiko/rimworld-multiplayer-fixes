@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -94,11 +95,31 @@ namespace Multiplayer.Client
                     session.deal.caravanDirty = false;
                 }
 
+                if (dialogError != null)
+                {
+                    DrawDialogError(inRect, session);
+                    return;
+                }
+
                 GUI.BeginGroup(inRect);
+                try
                 {
                     dialog.DoWindowContents(inRect.AtZero());
                 }
-                GUI.EndGroup();
+                catch (ExitGUIException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    // A throwing dialog never reaches its Cancel button, which left the session stuck pausing the map (#973)
+                    dialogError = e.Message;
+                    Log.Error($"Multiplayer: exception drawing trade dialog: {e}");
+                }
+                finally
+                {
+                    GUI.EndGroup();
+                }
 
                 int? traderLeavingIn = GetTraderTime(TradeSession.trader);
                 if (traderLeavingIn != null)
@@ -155,9 +176,22 @@ namespace Multiplayer.Client
             return null;
         }
 
+        private string dialogError;
+
+        private void DrawDialogError(Rect inRect, MpTradeSession session)
+        {
+            var labelRect = new Rect(inRect.x, inRect.y + 20f, inRect.width, 60f);
+            Widgets.Label(labelRect, $"The trade dialog failed to draw: {dialogError}\nSee the log for details.");
+
+            var btnRect = new Rect(inRect.center.x - 110f, labelRect.yMax + 10f, 220f, 35f);
+            if (Widgets.ButtonText(btnRect, ForceCloseOption(session).Label))
+                CancelTradeSession(session);
+        }
+
         private void RecreateDialog()
         {
             var session = Multiplayer.WorldComp.trading[selectedTab];
+            dialogError = null;
 
             try
             {
@@ -195,9 +229,18 @@ namespace Multiplayer.Client
         }
 
         [SyncMethod]
-        static void CancelTradeSession(MpTradeSession session)
+        internal static void CancelTradeSession(MpTradeSession session)
         {
             Multiplayer.WorldComp.RemoveTradeSession(session);
+        }
+
+        // Escape hatch for sessions that can't be cancelled through the dialog (#973)
+        public static FloatMenuOption ForceCloseOption(MpTradeSession session)
+        {
+            string label = "MpForceCloseTrade".CanTranslate()
+                ? "MpForceCloseTrade".Translate(session.Label).ToString()
+                : $"Force close trade: {session.Label}";
+            return new FloatMenuOption(label, () => CancelTradeSession(session));
         }
 
         private bool RemoveCachedTradeable(Tradeable t)

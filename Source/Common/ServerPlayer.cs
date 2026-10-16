@@ -115,6 +115,8 @@ namespace Multiplayer.Common
         {
             if (status == newStatus) return;
             status = newStatus;
+            // Loading can block the client's main thread for a long time; start the keep alive timeout fresh
+            keepAliveAt = Server.NetTimer;
             Server.SendToPlaying(ServerPlayerListPacket.Status(id, newStatus));
         }
 

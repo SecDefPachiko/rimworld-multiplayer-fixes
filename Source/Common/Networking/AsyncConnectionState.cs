@@ -72,8 +72,11 @@ public abstract class AsyncConnectionState(ConnectionBase connection) : MpConnec
         ServerLog.Verbose($"{connection} waiting for {PacketTypeInfo<T>.Id}");
 
         packetAwaitable = TypedPacketAwaitable<T>(out var task, announcePacketFailure: false);
-        return task
-            .ContinueWith(finishedTask => (T)finishedTask.Result!, TaskContinuationOptions.OnlyOnRanToCompletion);
+        return Unwrap(task);
+
+        // Awaiting (instead of ContinueWith) keeps the state machine on the server thread. A ContinueWith continuation
+        // is scheduled on the ThreadPool, which made the rest of the join handshake race with the server loop.
+        static async Task<T> Unwrap(Task<T?> packetTask) => (T)(await packetTask)!;
     }
 
     /// <summary>

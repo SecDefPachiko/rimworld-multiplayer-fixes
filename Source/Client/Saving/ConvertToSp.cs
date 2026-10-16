@@ -1,4 +1,5 @@
 ﻿using Verse;
+using RimWorld;
 using Verse.Profile;
 
 namespace Multiplayer.Client.Saving;
@@ -22,12 +23,24 @@ public class ConvertToSp
         Autosaving.SaveGameToFile_Overwrite(saveName, false);
     }
 
-    private static void PrepareSingleplayer()
+    // Used after losing the connection, when the multiplayer session is already stopped but the game is still loaded.
+    // Lets the client keep the game instead of losing everything since the host's last autosave (#937).
+    public static void DoConvertAfterDisconnect(Faction spectator)
+    {
+        LongEventHandler.QueueLongEvent(() =>
+        {
+            PrepareSingleplayer(spectator);
+            PrepareLoading();
+        }, "Play", "MpConvertingToSp", true, null);
+    }
+
+    private static void PrepareSingleplayer() => PrepareSingleplayer(Multiplayer.WorldComp.spectatorFaction);
+
+    private static void PrepareSingleplayer(Faction spectator)
     {
         Find.GameInfo.permadeathMode = false;
 
         // Remove spectator faction
-        var spectator = Multiplayer.WorldComp.spectatorFaction;
         if (spectator != null)
         {
             spectator.RemoveAllRelations();

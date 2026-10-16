@@ -1,3 +1,6 @@
+using Multiplayer.Client.Saving;
+using Multiplayer.Common;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -14,9 +17,17 @@ namespace Multiplayer.Client
         protected SessionDisconnectInfo info;
         public bool returnToServerBrowser;
 
+        // Captured on creation, the multiplayer session is stopped right after the window is shown
+        private readonly bool canKeepGame;
+        private readonly Faction spectatorFaction;
+
         public DisconnectedWindow(SessionDisconnectInfo info)
         {
             this.info = info;
+
+            canKeepGame = Current.ProgramState == ProgramState.Playing && Multiplayer.game != null &&
+                          Multiplayer.Client?.State == ConnectionStateEnum.ClientPlaying && !Multiplayer.arbiterInstance;
+            spectatorFaction = Multiplayer.game?.worldComp?.spectatorFaction;
 
             if (this.info.titleTranslated.NullOrEmpty())
                 this.info.titleTranslated = "MpDisconnected".Translate();
@@ -43,6 +54,8 @@ namespace Multiplayer.Client
             var buttonHeight = ButtonHeight + ButtonSpacing;
             if (info.specialButtonTranslated != null)
                 buttonHeight += ButtonHeight + ButtonSpacing;
+            if (canKeepGame)
+                buttonHeight += ButtonHeight + ButtonSpacing;
             var textHeight = Text.CalcHeight(text, inRect.width);
             height = textHeight + buttonHeight + Margin * 2;
 
@@ -68,6 +81,22 @@ namespace Multiplayer.Client
                     GenScene.GoToMainMenu();
                 else
                     Close();
+            }
+
+            if (canKeepGame)
+            {
+                buttonRect.y -= ButtonHeight + ButtonSpacing;
+                var keepGameBtn = buttonRect;
+                keepGameBtn.width = Mathf.Max(buttonWidth, Text.CalcSize("MpConvertToSp".Translate()).x + 30);
+                keepGameBtn = keepGameBtn.CenteredOnXIn(buttonRect);
+
+                if (Widgets.ButtonText(keepGameBtn, "MpConvertToSp".Translate()))
+                {
+                    returnToServerBrowser = false;
+                    Close();
+                    ConvertToSp.DoConvertAfterDisconnect(spectatorFaction);
+                    return;
+                }
             }
 
             if (info.specialButtonTranslated == null)

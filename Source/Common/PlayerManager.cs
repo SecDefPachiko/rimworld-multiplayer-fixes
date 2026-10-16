@@ -143,9 +143,28 @@ namespace Multiplayer.Common
 
         public static Dictionary<string, ColorRGB> givenColors = new();
 
+        // Steam P2P has no transport-level timeout, so a client that vanished without a goodbye would otherwise stay
+        // "playing" forever and keep the simulation paused for everyone (#843)
+        public const int KeepAliveTimeoutSeconds = 30;
+
+        public void DisconnectTimedOut()
+        {
+            var timedOut = Players.Where(p =>
+                p.IsPlaying && p.status == PlayerStatus.Playing && !p.IsHost && !p.IsArbiter &&
+                server.NetTimer - p.keepAliveAt > KeepAliveTimeoutSeconds * MultiplayerServer.NetTicksPerSecond
+            ).ToList();
+
+            foreach (var player in timedOut)
+            {
+                ServerLog.Log($"{player.Username} timed out (no keep alive for {KeepAliveTimeoutSeconds}s)");
+                player.Disconnect(MpDisconnectReason.NetFailed);
+            }
+        }
+
         public void OnJoin(ServerPlayer player)
         {
             player.hasJoined = true;
+            player.keepAliveAt = server.NetTimer;
             var standalonePrimaryPlayer = server.IsStandaloneServer &&
                 !server.JoinedPlayers.Any(p => p != player && !p.IsArbiter);
 

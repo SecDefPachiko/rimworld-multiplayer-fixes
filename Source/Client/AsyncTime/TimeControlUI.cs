@@ -391,9 +391,15 @@ public static class ColonistBarTimeControl
 
     static List<FloatMenuOption> GetBlockingWindowOptions(ColonistBar.Entry entry, ITickable tickable)
     {
-        return Multiplayer.WorldComp.sessionManager.AllSessions
+        var options = Multiplayer.WorldComp.sessionManager.AllSessions
             .ConcatIfNotNull(entry.map?.MpComp().sessionManager.AllSessions)
             .Select(s => s.GetBlockingWindowOptions(entry)).AllNotNull().ToList();
+
+        foreach (var trade in Multiplayer.WorldComp.trading)
+            if (trade.playerNegotiator?.Map == entry.map)
+                options.Add(TradingWindow.ForceCloseOption(trade));
+
+        return options;
     }
 
     static void SwitchToMapOrWorld(Map map)
