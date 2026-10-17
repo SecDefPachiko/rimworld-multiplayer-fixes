@@ -275,6 +275,12 @@ namespace Multiplayer.Client
         {
             if (Multiplayer.game == null) return;
 
+            // RimWorld 1.7 spawns drop pod contents before removing them from the pod's container (ActiveTransporter.PodOpen).
+            // A spawned thing is still reachable, so keep it registered; ThingDeSpawnPatch unregisters it when it despawns.
+            // Unregistering it here made synced orders on starting items (e.g. equipping the starting guns) fail to
+            // resolve the thing.
+            if (item.Spawned) return;
+
             ScribeUtil.sharedCrossRefs.Unregister(item);
             Multiplayer.ThingsById.Unregister(item);
         }
