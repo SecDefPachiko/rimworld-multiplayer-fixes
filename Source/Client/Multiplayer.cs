@@ -95,6 +95,7 @@ namespace Multiplayer.Client
 #endif
 
             modContentPack = content;
+            StaticDefaults.Capture();
             Native.EarlyInit(
                 Application.platform switch
                 {
