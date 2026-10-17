@@ -80,9 +80,32 @@ namespace Multiplayer.Client
                 $"conn={Multiplayer.Client?.State} programState={Current.ProgramState} maps={Find.Maps?.Count}");
         }
 
+        // Counted here and checked from OnMainThread.Update (a MonoBehaviour, not a Harmony patch), so a lost patch shows up
+        public static int prefixCalls;
+        private static float hookCheckAt = -100f;
+        private static int hookCheckCalls, hookCheckTicksGame;
+
+        public static void CheckTickHookAlive()
+        {
+            if (Multiplayer.Client == null || Current.ProgramState != ProgramState.Playing) return;
+            if (Time.realtimeSinceStartup - hookCheckAt < 5f) return;
+
+            int calls = prefixCalls - hookCheckCalls;
+            int ticksGame = Find.TickManager?.TicksGame ?? 0;
+            int vanillaTicks = ticksGame - hookCheckTicksGame;
+            Log.Message($"MP tick hook: prefix ran {calls}x in last {Time.realtimeSinceStartup - hookCheckAt:0.0}s, " +
+                        $"TicksGame {hookCheckTicksGame}->{ticksGame} (+{vanillaTicks}), mpTimer={Timer}, tickUntil={tickUntil}" +
+                        (calls == 0 ? "  <-- TickManagerUpdate patch NOT running" : ""));
+
+            hookCheckAt = Time.realtimeSinceStartup;
+            hookCheckCalls = prefixCalls;
+            hookCheckTicksGame = ticksGame;
+        }
+
         static bool Prefix()
         {
             if (Multiplayer.Client == null) return true;
+            prefixCalls++;
             LogCatchUpDiagnostics();
             if (!ShouldHandle) return false;
             if (Frozen) return false;

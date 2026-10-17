@@ -23,6 +23,7 @@ namespace Multiplayer.Client
                 return;
 
             MpInput.Update();
+            TickPatch.CheckTickHookAlive();
             queue.RunQueue(Log.Error);
             RunScheduled();
 

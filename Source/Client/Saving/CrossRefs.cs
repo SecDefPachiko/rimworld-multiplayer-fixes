@@ -15,7 +15,12 @@ namespace Multiplayer.Client
 
             if (__instance.def.HasThingIDNumber)
             {
-                ScribeUtil.sharedCrossRefs.RegisterLoaded(__instance);
+                // Things loaded unspawned (e.g. in drop pods when hosting) are already registered by the load, and
+                // registering the same object again logs an error. A different object under the same id still errors.
+                var crossRefs = ScribeUtil.sharedCrossRefs;
+                if (!crossRefs.allObjectsByLoadID.TryGetValue(__instance.GetUniqueLoadID(), out var registered) ||
+                    registered != __instance)
+                    crossRefs.RegisterLoaded(__instance);
                 Multiplayer.ThingsById.Register(__instance);
             }
         }
