@@ -52,21 +52,38 @@ namespace Multiplayer.Client
             Designator designator = __instance;
 
             Map map = Find.CurrentMap;
-            LoggingByteWriter writer = new LoggingByteWriter();
-            writer.Log.Node("Designate multi cell: " + designator.GetType());
             IntVec3[] cellArray = __0.ToArray();
 
-            WriteData(writer, DesignatorMode.MultiCell, designator);
-            SyncSerialization.WriteSync(writer, cellArray);
+            // A command's data is limited to 64 KiB and a cell takes 6 bytes. Larger drags threw a WriterException and
+            // did nothing, so split them. Zones stay in one command: splitting could create several zones from one drag.
+            if (cellArray.Length > MaxCellsPerCommand && designator is Designator_ZoneAdd)
+            {
+                Messages.Message("Area too large to sync in multiplayer, drag a smaller area.", MessageTypeDefOf.RejectInput, false);
+                return false;
+            }
 
-            if (__instance is Designator_Plan_Add addDesignator)
-                SyncSerialization.WriteSync(writer, addDesignator.colorDef);
+            for (int start = 0; start < cellArray.Length; start += MaxCellsPerCommand)
+            {
+                var cells = cellArray.Skip(start).Take(MaxCellsPerCommand).ToArray();
 
-            SendSyncCommand(map.uniqueID, writer);
-            Multiplayer.WriterLog.AddCurrentNode(writer);
+                LoggingByteWriter writer = new LoggingByteWriter();
+                writer.Log.Node("Designate multi cell: " + designator.GetType());
+
+                WriteData(writer, DesignatorMode.MultiCell, designator);
+                SyncSerialization.WriteSync(writer, cells);
+
+                if (__instance is Designator_Plan_Add addDesignator)
+                    SyncSerialization.WriteSync(writer, addDesignator.colorDef);
+
+                SendSyncCommand(map.uniqueID, writer);
+                Multiplayer.WriterLog.AddCurrentNode(writer);
+            }
 
             return false;
         }
+
+        // 48 KB of cells, leaving room for the designator data in the same command
+        private const int MaxCellsPerCommand = 8000;
 
         public static bool DesignateThing(Designator __instance, Thing __0)
         {
