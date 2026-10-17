@@ -61,9 +61,29 @@ namespace Multiplayer.Client
         [TweakValue("Multiplayer")]
         public static bool doSimulate = true;
 
+        // Diagnostics for a client that joins but never catches up (RimWorld 1.7): every 5s while behind, log why
+        // ticking may be blocked
+        private static float diagLoggedAt = -100f;
+
+        private static void LogCatchUpDiagnostics()
+        {
+            if (Time.realtimeSinceStartup - diagLoggedAt < 5f) return;
+            if (tickUntil - Timer <= 30) return;
+            diagLoggedAt = Time.realtimeSinceStartup;
+
+            var current = LongEventHandler.currentEvent;
+            Log.Message(
+                $"MP catch-up diag: timer={Timer} tickUntil={tickUntil} behind={tickUntil - Timer} " +
+                $"currentEvent={(current == null ? "none" : current.eventTextKey ?? current.eventText ?? "?")} " +
+                $"queuedEvents={LongEventHandler.eventQueue.Count} desynced={Multiplayer.session?.desynced} " +
+                $"serverFrozen={serverFrozen} frozenAt={frozenAt} simulating={simulating?.target} ticksToRun={ticksToRun} " +
+                $"conn={Multiplayer.Client?.State} programState={Current.ProgramState} maps={Find.Maps?.Count}");
+        }
+
         static bool Prefix()
         {
             if (Multiplayer.Client == null) return true;
+            LogCatchUpDiagnostics();
             if (!ShouldHandle) return false;
             if (Frozen) return false;
 
