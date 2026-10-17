@@ -39,6 +39,11 @@ namespace Multiplayer.Client
                 if (pInfo.IsOut) {
                     pType = pType.GetElementType();
                     yield return new CodeInstruction(OpCodes.Ldarg, argIndex);
+                    if (AccessTools.IsStruct(pType)) {
+                        // Zero the struct in place through the out reference
+                        yield return new CodeInstruction(OpCodes.Initobj, pType);
+                        continue;
+                    }
                     yield return CreateDefaultCodes(gen, pType).Last();
                     if (AccessTools.IsClass(pType))
                         yield return new CodeInstruction(OpCodes.Stind_Ref);
@@ -105,6 +110,9 @@ namespace Multiplayer.Client
                 var v = generator.DeclareLocal(type);
                 yield return new CodeInstruction(OpCodes.Ldloca, v);
                 yield return new CodeInstruction(OpCodes.Initobj, type);
+                // Push the zeroed struct as the return value. Without this, "ret" had nothing on the stack: Mono
+                // returned garbage, .NET (RimWorld 1.7) rejects the method with "Stack underflow".
+                yield return new CodeInstruction(OpCodes.Ldloc, v);
                 yield break;
             }
             if (AccessTools.IsValue(type)) {

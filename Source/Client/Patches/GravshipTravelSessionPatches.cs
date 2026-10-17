@@ -33,7 +33,9 @@ namespace Multiplayer.Client.Patches
             return MpMethodUtil.GetLambda(typeof(GravshipUtility), nameof(GravshipUtility.PreLaunchConfirmation), lambdaOrdinal: 4);
         }
 
-        static void Postfix(Dialog_MessageBox __instance)
+        // No __instance: the target is a compiler-generated lambda, not a Dialog_MessageBox method. Harmony 3
+        // (RimWorld 1.7) rejects the mismatched type, Harmony 2 silently passed the wrong object.
+        static void Postfix()
         {
             if (Multiplayer.Client == null) return;
             if (!Multiplayer.ExecutingCmds) return;

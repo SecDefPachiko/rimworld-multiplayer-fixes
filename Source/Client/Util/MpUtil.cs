@@ -18,6 +18,11 @@ namespace Multiplayer.Client
     {
         public static unsafe void MarkNoInlining(MethodBase method)
         {
+            // Writes into Mono's MonoMethod struct. On RimWorld 1.7's .NET runtime the handle points to a different
+            // structure, and this write corrupts it (BadImageFormatException, then a crash). The 1.7 runtime already
+            // keeps game methods patchable itself (WaylithClr.JitPatchableAssemblies in RimWorld.runtimeconfig.json).
+            if (!Native.IsMono) return;
+
             ushort* iflags = (ushort*)(method.MethodHandle.Value) + 1;
             *iflags |= (ushort)MethodImplOptions.NoInlining;
         }
