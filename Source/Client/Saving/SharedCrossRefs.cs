@@ -23,16 +23,21 @@ public class SharedCrossRefs : LoadedObjectDirectory
         tempKeys.Clear();
     }
 
+    private static bool IsOnMap(ILoadReferenceable val, Map map) =>
+        val is Thing thing && thing.Map == map ||
+        val is PassingShip ship && ship.Map == map ||
+        val is Bill bill && bill.Map == map;
+
+    public static bool IsOnAnyMap(ILoadReferenceable val) =>
+        val is Thing { Map: not null } || val is PassingShip { Map: not null } || val is Bill { Map: not null };
+
     public List<ILoadReferenceable> UnregisterAllFrom(Map map)
     {
         var unregistered = new List<ILoadReferenceable>();
 
         foreach (var val in allObjectsByLoadID.Values.ToArray())
         {
-            if (val is Thing thing && thing.Map == map ||
-                val is PassingShip ship && ship.Map == map ||
-                val is Bill bill && bill.Map == map
-               )
+            if (IsOnMap(val, map))
             {
                 Unregister(val);
                 unregistered.Add(val);

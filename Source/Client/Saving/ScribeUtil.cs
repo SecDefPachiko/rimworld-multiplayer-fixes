@@ -22,7 +22,6 @@ namespace Multiplayer.Client
 
         //dbg
         public static bool removeMapRefs;
-        private static List<ILoadReferenceable> removedMapRefs;
 
         public static void StartWriting(bool indent = false)
         {
@@ -151,14 +150,17 @@ namespace Multiplayer.Client
             }
 
             defaultCrossRefs ??= Scribe.loader.crossRefs.loadedObjectDirectory;
-            Scribe.loader.crossRefs.loadedObjectDirectory = sharedCrossRefs;
 
-            if (removeMapRefs)
-            {
-                removedMapRefs = new List<ILoadReferenceable>();
-                foreach (var map in Find.Maps)
-                    removedMapRefs.AddRange(sharedCrossRefs.UnregisterAllFrom(map));
-            }
+            // Give the loader a copy, never sharedCrossRefs itself. When vanilla finishes resolving it clears the
+            // loader's directory (CrossRefHandler.Clear -> LoadedObjectDirectory.Clear). LoadedObjectsClearPatch was
+            // meant to stop that for sharedCrossRefs, but on RimWorld 1.7 that tiny method gets past the patch, so
+            // every synced Job/exposable read wiped the whole shared directory: afterwards no prioritized or ordered
+            // job could resolve its targets. Objects registered while reading also end up only in the copy.
+            var directory = new LoadedObjectDirectory();
+            foreach (var (key, obj) in sharedCrossRefs.allObjectsByLoadID)
+                if (!removeMapRefs || !SharedCrossRefs.IsOnAnyMap(obj))
+                    directory.allObjectsByLoadID[key] = obj;
+            Scribe.loader.crossRefs.loadedObjectDirectory = directory;
 
             MpLog.Debug($"Cross ref supply: {sharedCrossRefs.allObjectsByLoadID.Count} {sharedCrossRefs.allObjectsByLoadID.LastOrDefault()} {Faction.OfPlayer}");
         }
@@ -183,15 +185,16 @@ namespace Multiplayer.Client
 
             beforeFinish?.Invoke(element);
 
-            if (removeMapRefs)
+            try
             {
-                sharedCrossRefs.Reregister(removedMapRefs);
-                removedMapRefs = null;
+                FinalizeLoading();
             }
-
-            FinalizeLoading();
-
-            // Default cross refs restored in LoadedObjectsClearPatch
+            finally
+            {
+                // Don't rely on LoadedObjectsClearPatch for this either
+                if (defaultCrossRefs != null)
+                    Scribe.loader.crossRefs.loadedObjectDirectory = defaultCrossRefs;
+            }
 
             return element;
         }
