@@ -25,8 +25,24 @@ public class PacketTest
             icon = 3,
             x = 1.5f,
             z = 2.5f,
+            flags = ClientCursorPacket.FlagDrag,
             dragX = 4.4f,
             dragZ = 5.5f
+        };
+
+        yield return new ClientCursorPacket(5)
+        {
+            map = 1,
+            icon = 7,
+            x = 10.5f,
+            z = 20.5f,
+            flags = ClientCursorPacket.FlagPlacing | ClientCursorPacket.FlagDesignationDrag,
+            placingDefHash = 54321,
+            placingTerrain = true,
+            placingRot = 3,
+            designationDragX = 8,
+            designationDragZ = -2,
+            designationDragStyleHash = 4321
         };
 
         yield return new ServerCursorPacket(4, new ClientCursorPacket(123));

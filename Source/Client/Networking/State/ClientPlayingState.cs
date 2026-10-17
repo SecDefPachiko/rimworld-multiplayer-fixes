@@ -114,6 +114,17 @@ namespace Multiplayer.Client
             player.cursorIcon = data.icon;
 
             player.dragStart = data.HasDrag ? new Vector3(data.dragX, 0, data.dragZ) : PlayerInfo.Invalid;
+
+            player.placingDef = !data.HasPlacing ? null :
+                data.placingTerrain ? DefDatabase<TerrainDef>.GetByShortHash(data.placingDefHash) :
+                DefDatabase<ThingDef>.GetByShortHash(data.placingDefHash);
+            player.placingRot = new Rot4(data.placingRot);
+            player.designationDragStart = data.HasDesignationDrag
+                ? new IntVec3(data.designationDragX, 0, data.designationDragZ)
+                : IntVec3.Invalid;
+            player.designationDragStyle = data.HasDesignationDrag
+                ? DefDatabase<DrawStyleDef>.GetByShortHash(data.designationDragStyleHash)
+                : null;
         }
 
         [TypedPacketHandler]

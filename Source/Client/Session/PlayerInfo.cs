@@ -36,6 +36,12 @@ public class PlayerInfo : IPlayerInfo
     public byte cursorIcon;
     public Vector3 dragStart = Invalid;
 
+    // What the player is about to place or designate, drawn for others in PlacementPreviews
+    public BuildableDef placingDef;
+    public Rot4 placingRot;
+    public IntVec3 designationDragStart = IntVec3.Invalid;
+    public DrawStyleDef designationDragStyle;
+
     public Dictionary<int, float> selectedThings = new();
 
     public int Id => id;

@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Multiplayer.Common.Networking.Packet;
+using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 using Verse;
@@ -51,8 +52,28 @@ public class PlayerCursors
             if (Find.Selector.dragBox.IsValidAndActive)
             {
                 var dragVec = Find.Selector.dragBox.start;
+                packet.flags |= ClientCursorPacket.FlagDrag;
                 packet.dragX = dragVec.x;
                 packet.dragZ = dragVec.z;
+            }
+
+            var designator = Find.MapUI?.designatorManager?.SelectedDesignator;
+
+            if (designator is Designator_Place { PlacingDef: { } placingDef } place)
+            {
+                packet.flags |= ClientCursorPacket.FlagPlacing;
+                packet.placingDefHash = placingDef.shortHash;
+                packet.placingTerrain = placingDef is TerrainDef;
+                packet.placingRot = (byte)place.placingRot.AsInt;
+            }
+
+            var dragger = Find.MapUI?.designatorManager?.Dragger;
+            if (designator != null && dragger is { Dragging: true } && Find.DesignatorManager.SelectedStyle is { } style)
+            {
+                packet.flags |= ClientCursorPacket.FlagDesignationDrag;
+                packet.designationDragX = (short)dragger.startDragCell.x;
+                packet.designationDragZ = (short)dragger.startDragCell.z;
+                packet.designationDragStyleHash = style.shortHash;
             }
         }
 
