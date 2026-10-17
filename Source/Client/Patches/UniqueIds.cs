@@ -23,18 +23,10 @@ namespace Multiplayer.Client.Patches
             return !UseLocalIds;
         }
 
-        // Diagnostics: RimWorld 1.7 clients got plants with negative (local) ids after joining. Log who asks for them.
-        private static int localIdsLogged;
-
         static void Postfix(ref int __result)
         {
             if (UseLocalIds)
-            {
                 __result = localIds--;
-                if (localIdsLogged++ < 3)
-                    Log.Message($"MP local id {__result} (programState={Current.ProgramState}, inInterface={Multiplayer.InInterface}, " +
-                                $"override={useLocalIdsOverride}) from:\n{string.Join("\n", System.Linq.Enumerable.Take(new System.Diagnostics.StackTrace(1, false).ToString().Split('\n'), 12))}");
-            }
         }
     }
 

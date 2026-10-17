@@ -61,41 +61,29 @@ namespace Multiplayer.Client
         [TweakValue("Multiplayer")]
         public static bool doSimulate = true;
 
-        // Diagnostics for a client that joins but never catches up (RimWorld 1.7): every 5s while behind, log why
-        // ticking may be blocked
-        private static float diagLoggedAt = -100f;
-
-        private static void LogCatchUpDiagnostics()
-        {
-            if (Time.realtimeSinceStartup - diagLoggedAt < 5f) return;
-            if (tickUntil - Timer <= 30) return;
-            diagLoggedAt = Time.realtimeSinceStartup;
-
-            var current = LongEventHandler.currentEvent;
-            Log.Message(
-                $"MP catch-up diag: timer={Timer} tickUntil={tickUntil} behind={tickUntil - Timer} " +
-                $"currentEvent={(current == null ? "none" : current.eventTextKey ?? current.eventText ?? "?")} " +
-                $"queuedEvents={LongEventHandler.eventQueue.Count} desynced={Multiplayer.session?.desynced} " +
-                $"serverFrozen={serverFrozen} frozenAt={frozenAt} simulating={simulating?.target} ticksToRun={ticksToRun} " +
-                $"conn={Multiplayer.Client?.State} programState={Current.ProgramState} maps={Find.Maps?.Count}");
-        }
-
-        // Counted here and checked from OnMainThread.Update (a MonoBehaviour, not a Harmony patch), so a lost patch shows up
+        // Counted here and checked from OnMainThread.Update (a MonoBehaviour, not a Harmony patch), so a lost patch is
+        // noticed. On RimWorld 1.7 (.NET) tiered recompilation can drop Harmony detours; then vanilla ticks the game
+        // outside Multiplayer: joins hang on "waiting for game data" and clients never catch up.
         public static int prefixCalls;
         private static float hookCheckAt = -100f;
-        private static int hookCheckCalls, hookCheckTicksGame;
+        private static int hookCheckCalls = -1, hookCheckTicksGame;
+        private static bool hookDeadWarned;
 
         public static void CheckTickHookAlive()
         {
-            if (Multiplayer.Client == null || Current.ProgramState != ProgramState.Playing) return;
+            if (hookDeadWarned || Multiplayer.Client == null || Current.ProgramState != ProgramState.Playing) return;
             if (Time.realtimeSinceStartup - hookCheckAt < 5f) return;
 
-            int calls = prefixCalls - hookCheckCalls;
             int ticksGame = Find.TickManager?.TicksGame ?? 0;
-            int vanillaTicks = ticksGame - hookCheckTicksGame;
-            Log.Message($"MP tick hook: prefix ran {calls}x in last {Time.realtimeSinceStartup - hookCheckAt:0.0}s, " +
-                        $"TicksGame {hookCheckTicksGame}->{ticksGame} (+{vanillaTicks}), mpTimer={Timer}, tickUntil={tickUntil}" +
-                        (calls == 0 ? "  <-- TickManagerUpdate patch NOT running" : ""));
+            // The game advanced but our prefix never ran: vanilla is ticking without us (a single tick can come from
+            // vanilla's pause-on-load during a slow load, so require more)
+            if (hookCheckCalls == prefixCalls && ticksGame - hookCheckTicksGame > 30)
+            {
+                hookDeadWarned = true;
+                Log.Warning("Multiplayer: the game is ticking but Multiplayer's tick hook (TickManagerUpdate patch) isn't " +
+                            "running, so the game will desync or hang. On RimWorld 1.7 start the game with the environment " +
+                            "variable DOTNET_TieredCompilation=0 (tiered compilation drops Harmony patches).");
+            }
 
             hookCheckAt = Time.realtimeSinceStartup;
             hookCheckCalls = prefixCalls;
@@ -106,7 +94,6 @@ namespace Multiplayer.Client
         {
             if (Multiplayer.Client == null) return true;
             prefixCalls++;
-            LogCatchUpDiagnostics();
             if (!ShouldHandle) return false;
             if (Frozen) return false;
 
